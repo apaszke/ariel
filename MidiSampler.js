@@ -1,4 +1,4 @@
-function sampleMidi(path) {
+function sampleMidi(path, offset) {
   var midiFileParser = require('midi-file-parser');
   var file = require('fs').readFileSync(path, 'binary');
   var midi = midiFileParser(file);
@@ -32,8 +32,8 @@ function sampleMidi(path) {
     if (ticksPerSixteenth * sampleIndex < currentTick) {
       var sample = generateEmptySample();
       for(i in notes) {
-        if(i - 30 < 40 && i - 30 >= 0)
-          sample[i - 45] = notes[i] ? 1 : 0;
+        if(i - offset < 40 && i - offset >= 0)
+          sample[i - offset] = notes[i] ? 1 : 0;
       }
       samples.push(sample);
       sampleIndex++;

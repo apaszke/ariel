@@ -4,6 +4,7 @@ var fs = require('fs');
 var Midi = require('jsmidgen');
 var dnn = require('dnn');
 
+var NOTE_OFFSET = 45;
 
 var files = [];
 for(var i = 40; i <= 59; i++) {
@@ -16,7 +17,7 @@ var data = [];
 for(var i = 0; i < files.length; i++) {
   if(!fs.existsSync(files[i]))
     continue;
-  var samples = sampleMidi(files[i]);
+  var samples = sampleMidi(files[i], NOTE_OFFSET);
   for(var j = 0; (j + 1) * 16 < samples.length; j++) {
     var submatrix = extractColumns(samples, j * 16, 16);
     data.push(unfold(submatrix));
@@ -79,11 +80,15 @@ function printMatrix(m) {
 
 
 
-rbm1 = createRBN(640, 200, data);
+rbm1 = createRBN(640, 400, data);
 data2 = rbm1.sampleHgivenV(data)[1];
-rbm2 = createRBN(200, 10, data2);
+rbm2 = createRBN(400, 200, data2);
+data3 = rbm2.sampleHgivenV(data2)[1];
+rbm3 = createRBN(200, 70, data3);
+data4 = rbm3.sampleHgivenV(data3)[1];
+rbm4 = createRBN(70, 10, data4);
 
-console.log(rbm2.sampleHgivenV([data2[0]])[1]);
+console.log(rbm4.sampleHgivenV([data4[0]])[1]);
 
 
 function getRandomActivation(n) {
@@ -121,7 +126,9 @@ function createRBN(input, output, data) {
 var generated = [];
 
 for(var i = 0; i < 12; i++) {
-  var hiddenTmp = rbm2.sampleVgivenH([getRandomActivation(10)])[1][0];
+  var hiddenTmp = rbm4.sampleVgivenH([getRandomActivation(10)])[1][0];
+  hiddenTmp = rbm3.sampleVgivenH([hiddenTmp])[1][0];
+  hiddenTmp = rbm2.sampleVgivenH([hiddenTmp])[1][0];
   var tmp = reshape(rbm1.sampleVgivenH([hiddenTmp])[1][0]);
   for(var j = 0; j < tmp.length; j++) {
     generated.push(tmp[j]);
@@ -146,7 +153,7 @@ for (var col = 0; col < events.length - 1; col++){
   for(var i = 0; i < 40; i++) {
     if(events[col][i] === 1 && !currentlyPlaying[i]) {
       currentlyPlaying[i] = true;
-      track.addNoteOn(0, i+45, offset, VELOCITY);
+      track.addNoteOn(0, i+NOTE_OFFSET, offset, VELOCITY);
       offset = 0;
     }
   }
@@ -154,7 +161,7 @@ for (var col = 0; col < events.length - 1; col++){
   for(var i = 0; i < 40; i++) {
     if(events[col][i] === 0 && currentlyPlaying[i]) {
       currentlyPlaying[i] = false;
-      track.addNoteOff(0, i+45, firstOff ? offsetStep : 0, VELOCITY);
+      track.addNoteOff(0, i+NOTE_OFFSET, firstOff ? offsetStep : 0, VELOCITY);
       firstOff = false;
     }
   }
@@ -165,12 +172,13 @@ var fistOff = true;
 for(var i = 0; i < 40; i++) {
   if(events[events.length - 1][i] === 0 && currentlyPlaying[i]) {
     currentlyPlaying[i] = false;
-    track.addNoteOff(0, i+45, firstOff ? offsetStep : 0, VELOCITY);
+    track.addNoteOff(0, i+NOTE_OFFSET, firstOff ? offsetStep : 0, VELOCITY);
     firstOff = false;
   }
 }
 
 fs.writeFileSync('test.mid', file.toBytes(), 'binary');
 
-var samples = sampleMidi('test.mid');
-printMatrix(samples);
+// var samples = sampleMidi('test.mid', NOTE_OFFSET);
+// console.log(samples);
+// printMatrix(samples);
