@@ -5,6 +5,7 @@ var Midi = require('jsmidgen');
 var dnn = require('dnn');
 
 var NOTE_OFFSET = 45;
+var WINDOW_WIDTH = 32;
 
 var files = [];
 for(var i = 40; i <= 59; i++) {
@@ -13,13 +14,17 @@ for(var i = 40; i <= 59; i++) {
 
 files = ["Prelude17.mid"]
 
+/*
+ *  Extract samples from files
+ */
+
 var data = [];
 for(var i = 0; i < files.length; i++) {
   if(!fs.existsSync(files[i]))
     continue;
   var samples = sampleMidi(files[i], NOTE_OFFSET);
-  for(var j = 0; (j + 1) * 16 < samples.length; j++) {
-    var submatrix = extractColumns(samples, j * 16, 16);
+  for(var j = 0; (j + 1) * WINDOW_WIDTH < samples.length; j++) {
+    var submatrix = extractColumns(samples, j * WINDOW_WIDTH, WINDOW_WIDTH);
     data.push(unfold(submatrix));
   }
   console.log("Parsed " + i + "th file");
@@ -52,16 +57,6 @@ function reshape(v) {
   return res;
 }
 
-function compare(m1, m2) {
-  for(var i = 0; i < m1.length; i++) {
-    for(var ii = 0; ii < m1[0].length; ii++) {
-      if (m1[i][ii] != m2[i][ii])
-        return false;
-    }
-  }
-  return true;
-}
-
 function printMatrix(m) {
   var rows = m[0].length;
   var columns = m.length;
@@ -78,18 +73,46 @@ function printMatrix(m) {
   }
 }
 
+/*
+ *  Create model
+ */
+
+function createRBN(input, output, data) {
+  var rbm = new dnn.RBM({
+      input : data,
+      n_visible : input,
+      n_hidden : output
+  });
+
+  rbm.set('log level', 2);
+
+  var trainingEpochs = 80;
+
+  rbm.train({
+      lr : 0.5,
+      k : 3,
+      epochs : trainingEpochs
+  });
+
+  return rbm;
+}
 
 
-rbm1 = createRBN(640, 400, data);
+rbm1 = createRBN(1280, 700, data);
 data2 = rbm1.sampleHgivenV(data)[1];
-rbm2 = createRBN(400, 200, data2);
+rbm2 = createRBN(700, 500, data2);
 data3 = rbm2.sampleHgivenV(data2)[1];
-rbm3 = createRBN(200, 70, data3);
+rbm3 = createRBN(500, 200, data3);
 data4 = rbm3.sampleHgivenV(data3)[1];
-rbm4 = createRBN(70, 10, data4);
+rbm4 = createRBN(200, 70, data4);
+data5 = rbm4.sampleHgivenV(data4)[1];
+rbm5 = createRBN(70, 10, data5);
 
-console.log(rbm4.sampleHgivenV([data4[0]])[1]);
+/*
+ *  Generate note matrix using trained units
+ */
 
+var generated = [];
 
 function getRandomActivation(n) {
   var rand = [];
@@ -99,34 +122,9 @@ function getRandomActivation(n) {
   return rand;
 }
 
-function createRBN(input, output, data) {
-  var rbm1 = new dnn.RBM({
-      input : data,
-      n_visible : input,
-      n_hidden : output
-  });
-
-  rbm1.set('log level', 2);
-
-  var trainingEpochs = 100;
-
-  rbm1.train({
-      lr : 0.6,
-      k : 8, // CD-k.
-      epochs : trainingEpochs
-  });
-
-  return rbm1;
-}
-
-// printMatrix(reshape(rbm1.sampleVgivenH([[1,0]])[1][0]));
-// printMatrix(reshape(rbm1.sampleVgivenH([[0,1]])[1][0]));
-
-
-var generated = [];
-
 for(var i = 0; i < 12; i++) {
-  var hiddenTmp = rbm4.sampleVgivenH([getRandomActivation(10)])[1][0];
+  var hiddenTmp = rbm5.sampleVgivenH([getRandomActivation(10)])[1][0];
+  hiddenTmp = rbm4.sampleVgivenH([hiddenTmp])[1][0];
   hiddenTmp = rbm3.sampleVgivenH([hiddenTmp])[1][0];
   hiddenTmp = rbm2.sampleVgivenH([hiddenTmp])[1][0];
   var tmp = reshape(rbm1.sampleVgivenH([hiddenTmp])[1][0]);
@@ -136,6 +134,11 @@ for(var i = 0; i < 12; i++) {
 }
 
 printMatrix(generated);
+
+/*
+ *  Save generated matrix to MIDI file
+ */
+
 
 var events = generated;
 
@@ -178,7 +181,3 @@ for(var i = 0; i < 40; i++) {
 }
 
 fs.writeFileSync('test.mid', file.toBytes(), 'binary');
-
-// var samples = sampleMidi('test.mid', NOTE_OFFSET);
-// console.log(samples);
-// printMatrix(samples);
