@@ -1,2 +1,4 @@
-###In the beginning...
-Adam said to give her a try.
+# ariel, the
+
+ariel is a restricted Boltzmann machine based neural network which can be taught how to play music.
+ 
