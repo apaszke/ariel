@@ -1,11 +1,8 @@
 #ariel
 **ariel** is a restricted Boltzmann machine based neural network which can be taught how to play music.
 
-##Input:
-ariel uses parsed MIDI tracks as input.
-
-##Output:
-ariel returns a fully legal MIDI track that can be loaded to any MIDI player.
+##Input/Output:
+ariel uses parsed MIDI tracks as input and returns a fully legal MIDI track that can be loaded to any MIDI player.
 
 ##Neural network:
 The implementation of the neural network is strongly based on the `dnn` [library for node.js][1] with a handful of additional hacks and tricks.
