@@ -12,7 +12,7 @@ for(var i = 40; i <= 59; i++) {
   files.push('../chupacabra/samples/0'+i+'.mid');
 }
 
-files = ["Prelude17.mid"]
+files = ['Prelude17.mid']
 
 /*
  *  Extract samples from files
@@ -86,10 +86,10 @@ function createRBN(input, output, data) {
 
   rbm.set('log level', 2);
 
-  var trainingEpochs = 80;
+  var trainingEpochs = 150;
 
   rbm.train({
-      lr : 0.5,
+      lr : 0.6,
       k : 3,
       epochs : trainingEpochs
   });
@@ -98,21 +98,30 @@ function createRBN(input, output, data) {
 }
 
 
-rbm1 = createRBN(1280, 700, data);
+rbm1 = createRBN(1280, 500, data);
 data2 = rbm1.sampleHgivenV(data)[1];
-rbm2 = createRBN(700, 500, data2);
+rbm2 = createRBN(500, 250, data2);
 data3 = rbm2.sampleHgivenV(data2)[1];
-rbm3 = createRBN(500, 200, data3);
-data4 = rbm3.sampleHgivenV(data3)[1];
-rbm4 = createRBN(200, 70, data4);
-data5 = rbm4.sampleHgivenV(data4)[1];
-rbm5 = createRBN(70, 10, data5);
+rbm3 = createRBN(250, 7, data3);
 
 /*
  *  Generate note matrix using trained units
  */
 
 var generated = [];
+
+var tmpdata2 = rbm1.sampleHgivenV(data)[0];
+var tmpdata3 = rbm2.sampleHgivenV(data2)[0];
+var tmpfinal = rbm3.sampleHgivenV(data3)[0];
+
+// Randomize results
+// for(var i = 0; i < tmpfinal.length; i++) {
+//   for(var j = 0; j < tmpfinal[i].length; j++) {
+//     if (Math.random() > 0.8) {
+//       tmpfinal[i][j] += -0.05 + Math.random() * 0.1;
+//     }
+//   }
+// }
 
 function getRandomActivation(n) {
   var rand = [];
@@ -122,16 +131,22 @@ function getRandomActivation(n) {
   return rand;
 }
 
+
 for(var i = 0; i < 12; i++) {
-  var hiddenTmp = rbm5.sampleVgivenH([getRandomActivation(10)])[1][0];
-  hiddenTmp = rbm4.sampleVgivenH([hiddenTmp])[1][0];
-  hiddenTmp = rbm3.sampleVgivenH([hiddenTmp])[1][0];
+  var hiddenTmp = rbm3.sampleVgivenH(tmpfinal)[1][0];
   hiddenTmp = rbm2.sampleVgivenH([hiddenTmp])[1][0];
   var tmp = reshape(rbm1.sampleVgivenH([hiddenTmp])[1][0]);
   for(var j = 0; j < tmp.length; j++) {
     generated.push(tmp[j]);
   }
 }
+
+for(var i = 0; i < generated.length; i++) {
+  for(var j = 0; j < generated[i].length; j++) {
+    generated[i][j] = (generated[i][j] > Math.random()) ? 1 : 0;
+  }
+}
+
 
 printMatrix(generated);
 
@@ -180,4 +195,4 @@ for(var i = 0; i < 40; i++) {
   }
 }
 
-fs.writeFileSync('test.mid', file.toBytes(), 'binary');
+fs.writeFileSync(process.argv[2] || 'test.mid', file.toBytes(), 'binary');

@@ -2,10 +2,11 @@ function sampleMidi(path, offset) {
   var midiFileParser = require('midi-file-parser');
   var file = require('fs').readFileSync(path, 'binary');
   var midi = midiFileParser(file);
+  console.log(midi.header.trackCount);
 
   var trackResolution = midi.header.ticksPerBeat;
   var ticksPerSixteenth = trackResolution / 8;
-  var trackNumber = 1;
+  var trackNumber = (midi.header.trackCount == 1) ? 0 : 1;
 
   var notes = {};
   var noteCount = 0;
